@@ -38,7 +38,7 @@ Text output in List of Pairs
 List of pairs output to be according to the rules of the Keizer pairing rules.
 
 Will be run in the browser <br />
-    a) Algorithm must work in a performant way for pairings of 1500 players 
+    a) Algorithm must work in a performant way for pairings of 1500 players <br />
         i) Must return a pairing in under 30 seconds with the maximum players and complexity <br />
         ii) Should be able to run on browser on a low-spec machine (eg. tablet in Africa) <br />
     b) Automated test suite <br />
