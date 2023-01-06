@@ -11,11 +11,6 @@ Front end pairing engine and framework in TypeScript.
     b) Jerrold Wong  jerroldwongyz@gmail.com <br />
     c) David Cordover  david@tornelo.com <br />
     d) Simon Dale scd@thecrag.com	 <br />
-3) Phone <br />
-    a) Rafi  0451 401 202 <br />
-    b) Jerrold  0493 412 429 <br />
-    c) David  0411 877 833 <br />
-    d) Simon  0407 834 027 <br />
   
 ## Background
 **Staging Environment for testing Tornelo:** <br />
@@ -44,6 +39,6 @@ List of pairs output to be according to the rules of the Keizer pairing rules.
 
 Will be run in the browser <br />
     a) Algorithm must work in a performant way for pairings of 1500 players <br />
-        1) Must return a pairing in under 30 seconds with the maximum players and complexity <br />
-        2) Should be able to run on browser on a low-spec machine (eg. tablet in Africa) <br />
+        i) Must return a pairing in under 30 seconds with the maximum players and complexity <br />
+        ii) Should be able to run on browser on a low-spec machine (eg. tablet in Africa) <br />
     b) Automated test suite <br />
