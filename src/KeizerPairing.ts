@@ -62,4 +62,3 @@ async function KeizerPairing(input: number[], filename: string): Promise<void> {
 
 KeizerPairing([1,2,3,4,5,6,7,8,9], "../TRFx/sample-keizer-pairing--1.trf");
 
-//test test
