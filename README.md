@@ -6,26 +6,26 @@ Front end pairing engine and framework in TypeScript.
 
 ## Communication
 1) Zoom Chat (Tornelo Pairing Project group chat) 
-2) Email 
-	a) Rafi Memon  memonrafiullah76@gmail.com 
+2) Email \n
+    a) Rafi Memon  memonrafiullah76@gmail.com 
     b) Jerrold Wong  jerroldwongyz@gmail.com 
     c) David Cordover  david@tornelo.com
     d) Simon Dale scd@thecrag.com	 
-3) Phone
+3) Phone \n
     a) Rafi  0451 401 202
     b) Jerrold  0493 412 429
     c) David  0411 877 833
     d) Simon  0407 834 027
   
 ## Background
-**Staging Environment for testing Tornelo:**
+**Staging Environment for testing Tornelo:** \n
 https://staging.tornelo.com/chess 
 Create an account, run an event, explore and play.
 
-**Pairing rules:**
+**Pairing rules:** \n
 https://jbfsoftware.com//sevilla-keizer/ 
 
-**JaVaFo implementation guide:**
+**JaVaFo implementation guide:** \n
 http://www.rrweb.org/javafo/aum/JaVaFo2_AUM.htm
 
 The input and output formats will be the same for the Front-End engine as are described in the JaVaFo implementation. 
