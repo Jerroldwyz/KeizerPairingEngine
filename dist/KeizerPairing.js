@@ -19,42 +19,44 @@ function asyncReadFile(filename) {
             let sanitisedFile = [];
             for (let line = 0; line < TRFxFileSplit.length; line++) {
                 if (TRFxFileSplit[line].substring(0, 3) === '001') {
-                    sanitisedFile.push(TRFxFileSplit[line]);
+                    sanitisedFile.push(TRFxFileSplit[line].replace(/\s+/g, ' ').split(' '));
                 }
             }
             return sanitisedFile;
         }
         catch (err) {
             console.log(err);
-            return 'Something went wrong';
+            return [['']];
         }
     });
 }
-function KeizerPairing(input, filename) {
+function KeizerPairing(filename) {
     return __awaiter(this, void 0, void 0, function* () {
-        let TRFx = yield asyncReadFile(filename);
-        for (let i = 0; i < TRFx.length; i++) {
-            console.log(TRFx[i]);
+        let playersArray = yield asyncReadFile(filename);
+        playersArray.push(['001', '11', 'm', 'g', 'Mirzoev,', 'Azer', '2527', 'AZE', '13400304', '1978', '4.0', '1', '26', 'w', '1', '13', 'b', '1', '8', 'w', '1', '4', 'b', '1']);
+        let bottomKeizerValue = Math.floor(playersArray.length / 2);
+        for (let i = playersArray.length - 1; i >= 0; i--) {
+            playersArray[i].push(bottomKeizerValue.toString());
+            bottomKeizerValue++;
         }
-        let result = [[]];
-        console.log(Math.floor(input.length / 2));
-        for (let i = 0; i < input.length; i += 2) {
-            if (input.length % 2 === 0) {
-                result.push([input[i], input[i + 1]]);
-                console.log(input[i], input[i + 1]);
+        for (let i = 0; i <= playersArray.length - 1; i++) {
+            console.log(playersArray[i]);
+        }
+        console.log(Math.ceil(playersArray.length / 2));
+        for (let i = 0; i < playersArray.length; i += 2) {
+            if (playersArray.length % 2 === 0) {
+                console.log(playersArray[i][1], playersArray[i + 1][1]);
             }
             else {
-                if (i === input.length - 1) {
-                    result.push([input[i]]);
-                    console.log(input[i]);
+                if (i === playersArray.length - 1) {
+                    console.log(playersArray[i][1], 0);
                 }
                 else {
-                    result.push([input[i], input[i + 1]]);
-                    console.log(input[i], input[i + 1]);
+                    console.log(playersArray[i][1], playersArray[i + 1][1]);
                 }
             }
         }
     });
 }
-KeizerPairing([1, 2, 3, 4, 5, 6, 7, 8, 9], "../TRFx/sample-keizer-pairing--1.trf");
+KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
 //# sourceMappingURL=KeizerPairing.js.map
