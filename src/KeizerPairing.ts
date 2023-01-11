@@ -13,11 +13,11 @@ async function asyncReadFile(filename: string) {
         const TRFxFile = 
         await fsPromises.readFile(join(__dirname, filename),'utf-8'); // _dirname is the name of the current directory this file is stored in
 
-        const TRFxFileSplit = TRFxFile.split("\n") // splits the file by new lines
-        let sanitisedFile: string[] = [] // sanitisedFile is an array that contains lines that stores players data
+        const TRFxFileSplit = TRFxFile.split("\n"); // splits the file by new lines
+        let sanitisedFile: string[][] = []; // sanitisedFile is an array that contains lines that stores players data
         for(let line = 0; line < TRFxFileSplit.length; line++){
             if(TRFxFileSplit[line].substring(0,3) === '001'){ // 001 is code for player data
-                sanitisedFile.push(TRFxFileSplit[line]) 
+                sanitisedFile.push(TRFxFileSplit[line].replace(/\s+/g, ' ').split(' '));
             }
         }
 
@@ -25,40 +25,47 @@ async function asyncReadFile(filename: string) {
 
     } catch (err) { // catches the error if file read goes wrong
         console.log(err);
-        return 'Something went wrong';
+        return [['']];
     }
 }
+
 /**
  * This function is incomplete, but it should encompass the algorithm for the Keizer pairing system.
+ * 
  * @param input - this parameter to be deprecated later on
  * @param filename - The name of the file. Format: './filename.extension', '../folder/filename.extension'
  * @returns Returns void but should write pairings into an external text file.
  */
-async function KeizerPairing(input: number[], filename: string): Promise<void> {
-    let TRFx = await asyncReadFile(filename); // calls the asyncReadFile function to receive sanitised file
-    for(let i = 0; i < TRFx.length; i++){
-        console.log(TRFx[i]);
+async function KeizerPairing(filename: string): Promise<void> {
+    
+    let playersArray = await asyncReadFile(filename); // calls the asyncReadFile function to receive sanitised file (players data only)
+    //playersArray.push(['001', '11', 'm', 'g', 'Mirzoev,', 'Azer', '2527', 'AZE', '13400304', '1978', '4.0', '1', '26', 'w', '1', '13', 'b', '1', '8', 'w', '1', '4', 'b', '1'])
+    let bottomKeizerValue = Math.floor(playersArray.length/2)
+    
+    for(let i = playersArray.length-1 ; i >= 0; i--){ // adds the keizer value to each player data from bottom to top
+        playersArray[i].push(bottomKeizerValue.toString())
+        bottomKeizerValue++;
+    }
+
+    // just for printing purposes
+    for(let i = 0; i <= playersArray.length-1; i++){
+        console.log(playersArray[i])
     }
 
     // MVP#1
-    let result: [number[]] = [[]];
-    console.log(Math.floor(input.length/2));
-    for(let i = 0; i < input.length; i += 2){
-        if(input.length%2 === 0){
-            result.push([input[i], input[i+1]]);
-            console.log(input[i], input[i+1]);
-        }else{
-            if(i === input.length - 1){
-                result.push([input[i]]);
-                console.log(input[i]);
+    console.log(Math.ceil(playersArray.length/2));
+    for(let i = 0; i < playersArray.length; i += 2){
+        if(playersArray.length%2 === 0){ // if even numbered players
+            console.log(playersArray[i][1], playersArray[i+1][1]);
+        }else{ // if odd numbered players
+            if(i === playersArray.length - 1){ // and it is the last element
+                console.log(playersArray[i][1], 0);
             }else{
-                result.push([input[i], input[i+1]]);
-                console.log(input[i], input[i+1]);
+                console.log(playersArray[i][1], playersArray[i+1][1]);
             }
         }
-    } 
+    }
 }
 
-
-KeizerPairing([1,2,3,4,5,6,7,8,9], "../TRFx/sample-keizer-pairing--1.trf");
+KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
 
