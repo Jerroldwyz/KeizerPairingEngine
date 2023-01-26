@@ -1,6 +1,38 @@
 import { promises as fsPromises } from "fs";
 import { join } from 'path';
 
+class Player {
+    startingRank: number; 
+    points: number; 
+    rank: number; 
+    keizerScore: number; 
+    keizerValue: number;
+    colorAllocation: string[];
+    opponentSeed: number[];
+    roundResult: string[];
+
+    // OPTIONAL
+    // sex: string;
+    // title: string;
+    // firstName: string;
+    // lastName: string;
+    // ratingFIDE: number;
+    // federationFIDE: number;
+    // numberFIDE: number;
+    // birthDate: string;
+
+    constructor(){
+        this.startingRank = 0; 
+        this.points = 0; 
+        this.rank = 0; 
+        this.keizerScore = 0;
+        this.keizerValue = 0;
+        this.colorAllocation = [];
+        this.opponentSeed = [];
+        this.roundResult = [];
+    }
+}
+
 /**
  * This function reads the TRFx file asynchronously without blocking the thread
  * and sanitises the file to retrieve useful lines.
@@ -13,19 +45,54 @@ async function asyncReadFile(filename: string) {
         const TRFxFile = 
         await fsPromises.readFile(join(__dirname, filename),'utf-8'); // _dirname is the name of the current directory this file is stored in
 
-        const TRFxFileSplit = TRFxFile.split("\n"); // splits the file by new lines
-        let sanitisedFile: string[][] = []; // sanitisedFile is an array that contains lines that stores players data
-        for(let line = 0; line < TRFxFileSplit.length; line++){
-            if(TRFxFileSplit[line].substring(0,3) === '001'){ // 001 is code for player data
-                sanitisedFile.push(TRFxFileSplit[line].replace(/\s+/g, ' ').split(' '));
+        const TRFxFileSplit = TRFxFile.split("\n");
+        let numberOfRounds: number = 1; // base case: number of rounds == 1
+        let playersArray: Player[] = [];
+
+        for (let row = 0; row < TRFxFileSplit.length; row++){
+            // extracting the number of rounds played in this tournament
+            if(TRFxFileSplit[row].substring(0,3) == 'XXR'){ // XXR represents the number of rounds played in tournament
+                numberOfRounds = +TRFxFileSplit[row][4]; // element at index [4] is always the number of rounds (following the TRF documentation)
+            }
+
+            // extracting all lines with player data
+            if(TRFxFileSplit[row].substring(0,3) === '001'){
+                let player: Player = new Player();
+                
+                player.startingRank = +TRFxFileSplit[row].substring(4,8);
+                player.points = +TRFxFileSplit[row].substring(80, 84);
+                player.rank = +TRFxFileSplit[row].substring(85, 89);
+                
+                let opponentIndex: number = 94; 
+                let colorIndex: number = 96;
+                let resultIndex: number = 98;
+
+                // extracting the opponent seed & color allocation & result of each round played
+                for(let round = 0; round < numberOfRounds; round++){
+                    // stops the for loop earlier when it has reached the latest round
+                    if(typeof TRFxFileSplit[row][opponentIndex] === "undefined"){
+                        break;
+                    }
+
+                    player.opponentSeed.push(+TRFxFileSplit[row][opponentIndex]);
+                    player.colorAllocation.push(TRFxFileSplit[row][colorIndex]);
+                    player.roundResult.push(TRFxFileSplit[row][resultIndex]);
+
+                    opponentIndex += 10;
+                    colorIndex += 10;
+                    resultIndex += 10;
+                }
+
+                playersArray.push(player);
             }
         }
 
-        return sanitisedFile;
+        return playersArray;
 
-    } catch (err) { // catches the error if file read goes wrong
+    // catches the error if file read goes wrong
+    } catch (err) { 
         console.log(err);
-        return [['']];
+        return [];
     }
 }
 
@@ -38,30 +105,55 @@ async function asyncReadFile(filename: string) {
  */
 async function KeizerPairing(filename: string): Promise<void> {
     
-    let playersArray = await asyncReadFile(filename); // calls the asyncReadFile function to receive sanitised file (players data only)
-    //playersArray.push(['001', '11', 'm', 'g', 'Mirzoev,', 'Azer', '2527', 'AZE', '13400304', '1978', '4.0', '1', '26', 'w', '1', '13', 'b', '1', '8', 'w', '1', '4', 'b', '1'])
-    let bottomKeizerValue = Math.floor(playersArray.length/2)
+    // calls the asyncReadFile function to receive sanitised file (players data only)
+    let playersArray = await asyncReadFile(filename); 
+   
+    let bottomKeizerValue = Math.floor(playersArray.length/2);
     
-    for(let i = playersArray.length-1 ; i >= 0; i--){ // adds the keizer value to each player data from bottom to top
-        playersArray[i].push(bottomKeizerValue.toString())
+    // adds the base keizer value to each player data from bottom to top
+    for(let i = playersArray.length-1; i >= 0; i--){ 
+        playersArray[i].keizerValue = bottomKeizerValue;
         bottomKeizerValue++;
     }
 
-    // just for printing purposes
+    // for printing purposes
     for(let i = 0; i <= playersArray.length-1; i++){
-        console.log(playersArray[i])
+        // console.log(playersArray[i]);
+        console.log(playersArray[i].opponentSeed);
+        console.log(playersArray[i].colorAllocation);
+        console.log(playersArray[i].roundResult);
+        console.log(playersArray[i].keizerValue);
     }
 
-    // MVP#1
+    // Calculating keizer score
+    for(let index = 0; index < playersArray.length/2; index++){
+        let opponent: Player = playersArray[playersArray[index].opponentSeed[0]]
+        let player: Player = playersArray[index] 
+        // change to enum
+        if(player.roundResult[0] === '1'){ // if win
+            player.keizerScore = player.keizerValue + opponent.keizerValue
+        }else if(player.roundResult[0] === '='){ // if draw
+            player.keizerScore = player.keizerValue + (opponent.keizerValue/2)
+        }else if(player.roundResult[0] === '0'){ // if loss
+            player.keizerScore = player.keizerValue + 0
+        }else if(player.roundResult[0] === 'U'){ // if pairing-allocated bye
+            player.keizerScore = player.keizerScore * 2
+        }
+        console.log(player.keizerScore)
+    }
+
+    // lodsh
+
+    // Pairing of players
     console.log(Math.ceil(playersArray.length/2));
     for(let i = 0; i < playersArray.length; i += 2){
         if(playersArray.length%2 === 0){ // if even numbered players
-            console.log(playersArray[i][1], playersArray[i+1][1]);
+            console.log(playersArray[i].startingRank, playersArray[i+1].startingRank);
         }else{ // if odd numbered players
             if(i === playersArray.length - 1){ // and it is the last element
-                console.log(playersArray[i][1], 0);
+                console.log(playersArray[i].startingRank, 0);
             }else{
-                console.log(playersArray[i][1], playersArray[i+1][1]);
+                console.log(playersArray[i].startingRank, playersArray[i+1].startingRank);
             }
         }
     }
