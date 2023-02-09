@@ -1,5 +1,6 @@
 import { promises as fsPromises } from "fs";
 import { join } from 'path';
+
 /**
  * 
  */
@@ -43,6 +44,11 @@ enum matchOutcome {
     lose = '0',
     draw = '=',
     pairingAllocatedBye = 'U'
+}
+
+enum color{
+    black = 'b',
+    white = 'w'
 }
 
 var totalNumberOfRounds = 1; // base case: number of round == 1
@@ -254,24 +260,126 @@ function SortByKeizerScore(playersArray: Player[]){
 
 /**
  * TOBEIMPLEMENTED
+ * output is always W B
  * @param playersArray 
  */
 function PlayerPairing(playersArray: Player[]){
+
+    let matchupArray : Player[][] = [];
     console.log(Math.ceil(playersArray.length/2));
-    for(let i = 0; i < playersArray.length; i += 2){
-        if(playersArray.length%2 === 0){
-            console.log(playersArray[i].startingRank, playersArray[i+1].startingRank);
-        }else{ 
+
+    if(playersArray.length%2 === 0){
+        for(let i = 0; i < playersArray.length; i += 2){
+            //regular pairing
+            if(tryMatchUp(playersArray[i], playersArray[i+1])){
+                matchupArray.push([playersArray[i], playersArray[i+1]]);
+            }else{ //do re-pair
+                
+            }
+        }
+    }else if(playersArray.length%2 === 1){
+        let bye: Player = new Player()
+        for(let i = 0; i < playersArray.length; i += 2){
             if(i === playersArray.length - 1){ 
-                console.log(playersArray[i].startingRank, 0);
+                if(!sameBye){
+                    matchupArray.push([playersArray[i], bye]);
+                }else{ // do re-pair
+                    
+                }
             }else{
-                console.log(playersArray[i].startingRank, playersArray[i+1].startingRank);
+                //regular pairing
+                if(tryMatchUp(playersArray[i], playersArray[i+1])){
+                    matchupArray.push([playersArray[i], playersArray[i+1]]);
+                }else{ //do re-pair
+                    
+                }
             }
         }
     }
+
+    for(let i = 0; i < matchupArray.length; i++){
+        console.log(matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank);
+    }
 }
 
-KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
-// KeizerPairing("../TRFx/david-keizer-pairing.trf");
+function sameBye(player: Player): boolean{
+    if(player.roundResult[-1] === "U" && player.roundResult[-2] === "U"){
+        return true
+    }
+    return false
+}
+
+function tryMatchUp(player1: Player, player2: Player): boolean{
+    if(!sameOpponent(player1, player2)){
+        if(!sameColourHistory(player1, player2)){
+            if(!sameColourScore(player1, player2)){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function sameOpponent(player1: Player, player2: Player): boolean{
+    if(player1.opponentSeed[player1.opponentSeed.length-1] === player1.opponentSeed[player1.opponentSeed.length-2]){
+        if(player1.opponentSeed[player1.opponentSeed.length-1] === player2.startingRank){
+            console.log(player2.startingRank)
+            return true
+        }
+    }
+    return false
+}
+
+function sameColourHistory(player1: Player, player2: Player): boolean{
+    if(player1.colorAllocation[player1.colorAllocation.length-1] === player1.colorAllocation[player1.colorAllocation.length-2]){
+        if(player2.colorAllocation[player2.colorAllocation.length-1] === player1.colorAllocation[player1.colorAllocation.length-1] && 
+            player2.colorAllocation[player2.colorAllocation.length-2] === player1.colorAllocation[player1.colorAllocation.length-2]){
+                return true
+        }
+    }
+    return false
+}
+
+function sameColourScore(player1: Player, player2: Player){
+    let p1ColorScore: number = 0;
+    let p2ColorScore: number = 0;
+
+    for(let i = 0; i < player1.colorAllocation.length; i++){
+        switch(player1.colorAllocation[i]){
+            case color.black:
+                p1ColorScore--;
+                break;
+            case color.white:
+                p1ColorScore++;
+                break;
+        }
+    }
+
+    for(let i = 0; i < player2.colorAllocation.length; i++){
+        switch(player2.colorAllocation[i]){
+            case color.black:
+                p2ColorScore--;
+                break;
+            case color.white:
+                p2ColorScore++;
+                break;
+        }
+    }
+
+    if(p1ColorScore === p2ColorScore){
+        if(p1ColorScore === 2 || p1ColorScore === -2){
+            return true
+        }
+    }
+
+    return false
+}
+
+// function rePair(){
+
+// }
+
+// KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
+KeizerPairing("../TRFx/david-keizer-pairing.trf");
 
 

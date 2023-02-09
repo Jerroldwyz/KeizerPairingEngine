@@ -30,6 +30,11 @@ var matchOutcome;
     matchOutcome["draw"] = "=";
     matchOutcome["pairingAllocatedBye"] = "U";
 })(matchOutcome || (matchOutcome = {}));
+var color;
+(function (color) {
+    color["black"] = "b";
+    color["white"] = "w";
+})(color || (color = {}));
 var totalNumberOfRounds = 1;
 var currentNumOfRounds = 0;
 function asyncReadFile(filename) {
@@ -136,20 +141,104 @@ function SortByKeizerScore(playersArray) {
     playersArray.sort((player1, player2) => (player1.keizerScore < player2.keizerScore) ? 1 : (player1.keizerScore > player2.keizerScore) ? -1 : 0);
 }
 function PlayerPairing(playersArray) {
+    let matchupArray = [];
     console.log(Math.ceil(playersArray.length / 2));
-    for (let i = 0; i < playersArray.length; i += 2) {
-        if (playersArray.length % 2 === 0) {
-            console.log(playersArray[i].startingRank, playersArray[i + 1].startingRank);
-        }
-        else {
-            if (i === playersArray.length - 1) {
-                console.log(playersArray[i].startingRank, 0);
+    if (playersArray.length % 2 === 0) {
+        for (let i = 0; i < playersArray.length; i += 2) {
+            if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
+                matchupArray.push([playersArray[i], playersArray[i + 1]]);
+                console.log("works");
             }
             else {
-                console.log(playersArray[i].startingRank, playersArray[i + 1].startingRank);
             }
         }
     }
+    else if (playersArray.length % 2 === 1) {
+        let bye = new Player();
+        for (let i = 0; i < playersArray.length; i += 2) {
+            if (i === playersArray.length - 1) {
+                if (!sameBye) {
+                    matchupArray.push([playersArray[i], bye]);
+                }
+                else {
+                }
+            }
+            else {
+                if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
+                    matchupArray.push([playersArray[i], playersArray[i + 1]]);
+                }
+                else {
+                }
+            }
+        }
+    }
+    for (let i = 0; i < matchupArray.length; i++) {
+        console.log(matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank);
+    }
 }
-KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
+function sameBye(player) {
+    if (player.roundResult[-1] === "U" && player.roundResult[-2] === "U") {
+        return true;
+    }
+    return false;
+}
+function tryMatchUp(player1, player2) {
+    if (!sameOpponent(player1, player2)) {
+        if (!sameColourHistory(player1, player2)) {
+            if (!sameColourScore(player1, player2)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+function sameOpponent(player1, player2) {
+    if (player1.opponentSeed[player1.opponentSeed.length - 1] === player1.opponentSeed[player1.opponentSeed.length - 2]) {
+        if (player1.opponentSeed[player1.opponentSeed.length - 1] === player2.startingRank) {
+            console.log(player2.startingRank);
+            return true;
+        }
+    }
+    return false;
+}
+function sameColourHistory(player1, player2) {
+    if (player1.colorAllocation[player1.colorAllocation.length - 1] === player1.colorAllocation[player1.colorAllocation.length - 2]) {
+        if (player2.colorAllocation[player2.colorAllocation.length - 1] === player1.colorAllocation[player1.colorAllocation.length - 1] &&
+            player2.colorAllocation[player2.colorAllocation.length - 2] === player1.colorAllocation[player1.colorAllocation.length - 2]) {
+            return true;
+        }
+    }
+    return false;
+}
+function sameColourScore(player1, player2) {
+    let p1ColorScore = 0;
+    let p2ColorScore = 0;
+    for (let i = 0; i < player1.colorAllocation.length; i++) {
+        switch (player1.colorAllocation[i]) {
+            case color.black:
+                p1ColorScore--;
+                break;
+            case color.white:
+                p1ColorScore++;
+                break;
+        }
+    }
+    for (let i = 0; i < player2.colorAllocation.length; i++) {
+        switch (player2.colorAllocation[i]) {
+            case color.black:
+                p2ColorScore--;
+                break;
+            case color.white:
+                p2ColorScore++;
+                break;
+        }
+    }
+    if (p1ColorScore === p2ColorScore) {
+        if (p1ColorScore === 2 || p1ColorScore === -2) {
+            return true;
+        }
+    }
+    return false;
+}
+KeizerPairing("../TRFx/david-keizer-pairing.trf");
 //# sourceMappingURL=KeizerPairing.js.map
