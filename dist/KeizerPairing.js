@@ -21,6 +21,7 @@ class Player {
         this.colorAllocation = [];
         this.opponentSeed = [];
         this.roundResult = [];
+        this.paired = false;
     }
 }
 var matchOutcome;
@@ -35,6 +36,11 @@ var color;
     color["black"] = "b";
     color["white"] = "w";
 })(color || (color = {}));
+const discardRules = {
+    rule2: 0,
+    rule3: 0,
+    rule4: 0
+};
 var totalNumberOfRounds = 1;
 var currentNumOfRounds = 0;
 function asyncReadFile(filename) {
@@ -93,7 +99,7 @@ function MatchDataExtraction(TRFxFileSplit, row, player) {
 function KeizerPairing(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         let playersArray = yield asyncReadFile(filename);
-        console.log(currentNumOfRounds);
+        console.log("Current number of rounds: " + currentNumOfRounds);
         for (let round = 1; round <= currentNumOfRounds; round++) {
             AssignKeizerValue(playersArray);
             SortByStartingRank(playersArray);
@@ -134,7 +140,6 @@ function CalculateKeizerScore(playersArray, round) {
                     break;
             }
         }
-        console.log(player.keizerScore);
     }
 }
 function SortByKeizerScore(playersArray) {
@@ -144,23 +149,49 @@ function PlayerPairing(playersArray) {
     let matchupArray = [];
     console.log(Math.ceil(playersArray.length / 2));
     if (playersArray.length % 2 === 0) {
-        for (let i = 0; i < playersArray.length; i += 2) {
-            if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
-                matchupArray.push([playersArray[i], playersArray[i + 1]]);
-                console.log("works");
-            }
-            else {
+        for (let i = 0; i < playersArray.length; i++) {
+            if (!playersArray[i].paired) {
+                if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
+                    matchupArray.push([playersArray[i], playersArray[i + 1]]);
+                }
+                else {
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule4 = 1;
+                        }
+                    }
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule3 = 1;
+                        }
+                    }
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule2 = 1;
+                        }
+                    }
+                    tryNext(playersArray, matchupArray, i);
+                }
             }
         }
     }
     else if (playersArray.length % 2 === 1) {
         let bye = new Player();
-        for (let i = 0; i < playersArray.length; i += 2) {
+        for (let i = 0; i < playersArray.length; i++) {
             if (i === playersArray.length - 1) {
                 if (!sameBye) {
                     matchupArray.push([playersArray[i], bye]);
                 }
                 else {
+                    let breakPair = breakNextPair(matchupArray);
+                    if (tryMatchUp(breakPair[1], playersArray[i])) {
+                        matchupArray.push([breakPair[1], playersArray[i]]);
+                        matchupArray.push([breakPair[0], bye]);
+                    }
+                    else if (tryMatchUp(breakPair[0], playersArray[i])) {
+                        matchupArray.push([breakPair[0], playersArray[i]]);
+                        matchupArray.push([breakPair[1], bye]);
+                    }
                 }
             }
             else {
@@ -168,6 +199,22 @@ function PlayerPairing(playersArray) {
                     matchupArray.push([playersArray[i], playersArray[i + 1]]);
                 }
                 else {
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule4 = 1;
+                        }
+                    }
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule3 = 1;
+                        }
+                    }
+                    if (!tryNext(playersArray, matchupArray, i)) {
+                        if (!rePair(playersArray, matchupArray, i)) {
+                            discardRules.rule2 = 1;
+                        }
+                    }
+                    tryNext(playersArray, matchupArray, i);
                 }
             }
         }
@@ -183,18 +230,24 @@ function sameBye(player) {
     return false;
 }
 function tryMatchUp(player1, player2) {
-    if (!sameOpponent(player1, player2)) {
-        if (!sameColourHistory(player1, player2)) {
-            if (!sameColourScore(player1, player2)) {
-                return true;
+    if (!player2.paired) {
+        if (discardRules.rule2 || !sameOpponent(player1, player2)) {
+            if (discardRules.rule3 || !sameColourHistory(player1, player2)) {
+                if (discardRules.rule4 || !sameColourScore(player1, player2)) {
+                    player1.paired = true;
+                    player2.paired = true;
+                    return true;
+                }
             }
         }
     }
     return false;
 }
 function sameOpponent(player1, player2) {
-    if (player1.opponentSeed[player1.opponentSeed.length - 1] === player1.opponentSeed[player1.opponentSeed.length - 2]) {
-        if (player1.opponentSeed[player1.opponentSeed.length - 1] === player2.startingRank) {
+    let playerOpponentList = player1.opponentSeed;
+    let length = playerOpponentList.length;
+    if (playerOpponentList[length - 1] === playerOpponentList[length - 2]) {
+        if (playerOpponentList[length - 1] === player2.startingRank) {
             console.log(player2.startingRank);
             return true;
         }
@@ -202,9 +255,13 @@ function sameOpponent(player1, player2) {
     return false;
 }
 function sameColourHistory(player1, player2) {
-    if (player1.colorAllocation[player1.colorAllocation.length - 1] === player1.colorAllocation[player1.colorAllocation.length - 2]) {
-        if (player2.colorAllocation[player2.colorAllocation.length - 1] === player1.colorAllocation[player1.colorAllocation.length - 1] &&
-            player2.colorAllocation[player2.colorAllocation.length - 2] === player1.colorAllocation[player1.colorAllocation.length - 2]) {
+    let p1ColorList = player1.colorAllocation;
+    let p2ColorList = player2.colorAllocation;
+    let p1Listlength = p1ColorList.length;
+    let p2Listlength = p2ColorList.length;
+    if (p1ColorList[p1Listlength - 1] === p1ColorList[p1Listlength - 2]) {
+        if (p2ColorList[p2Listlength - 1] === p1ColorList[p1Listlength - 1] &&
+            p2ColorList[p2Listlength - 2] === p1ColorList[p1Listlength - 2]) {
             return true;
         }
     }
@@ -234,7 +291,81 @@ function sameColourScore(player1, player2) {
         }
     }
     if (p1ColorScore === p2ColorScore) {
-        if (p1ColorScore === 2 || p1ColorScore === -2) {
+        if (p1ColorScore >= 2 || p1ColorScore <= -2) {
+            return true;
+        }
+    }
+    return false;
+}
+function tryNext(playersArray, matchupArray, i) {
+    let nextTry = i + 2;
+    for (nextTry; nextTry < playersArray.length; nextTry++) {
+        if (tryMatchUp(playersArray[i], playersArray[nextTry])) {
+            matchupArray.push([playersArray[i], playersArray[nextTry]]);
+            playersArray[i].paired = true;
+            playersArray[nextTry].paired = true;
+            return true;
+        }
+    }
+    return false;
+}
+function recursionPairing(playersArray, matchupArray, end) {
+    let brokenPair = breakNextPair(matchupArray);
+    if (brokenPair === undefined) {
+        return false;
+    }
+    let i = playersArray.indexOf(brokenPair[1]) + 1;
+    while (matchupArray.length != Math.ceil(end / 2)) {
+        for (i; i <= end; i++) {
+            for (let j = 0; j < brokenPair.length; j++) {
+                if (tryMatchUp(brokenPair[j], playersArray[i])) {
+                    matchupArray.push([brokenPair[j], playersArray[i]]);
+                }
+            }
+        }
+        let remainingPlayers = [];
+        for (let k = 0; k < end; k++) {
+            if (!playersArray[k].paired) {
+                remainingPlayers.push(playersArray[k]);
+            }
+        }
+        if (remainingPlayers.length % 2 === 0) {
+            for (let x = 0; x < remainingPlayers.length; x + 2) {
+                if (tryMatchUp(remainingPlayers[x], remainingPlayers[x + 1])) {
+                    matchupArray.push([remainingPlayers[x], remainingPlayers[x + 1]]);
+                }
+                else {
+                    recursionPairing(playersArray, matchupArray, end);
+                }
+            }
+        }
+    }
+    return true;
+}
+function breakNextPair(matchupArray) {
+    let brokenPair = matchupArray[matchupArray.length - 1];
+    brokenPair[0].paired = false;
+    brokenPair[1].paired = false;
+    matchupArray.pop();
+    return brokenPair;
+}
+function rePair(playersArray, matchupArray, i) {
+    let end = i + 1;
+    if (matchupArray.length === 0) {
+        return false;
+    }
+    let brokenPair = breakNextPair(matchupArray);
+    matchupArray.pop();
+    if (tryMatchUp(brokenPair[0], playersArray[i]) && tryMatchUp(brokenPair[1], playersArray[i + 1])) {
+        matchupArray.push([brokenPair[0], playersArray[i]]);
+        matchupArray.push([brokenPair[1], playersArray[i + 1]]);
+    }
+    else if (tryMatchUp(brokenPair[0], playersArray[i + 1]) && tryMatchUp(brokenPair[1], playersArray[i])) {
+        matchupArray.push([brokenPair[0], playersArray[i]]);
+        matchupArray.push([brokenPair[1], playersArray[i + 1]]);
+    }
+    else {
+        if (recursionPairing(playersArray, matchupArray, end)) {
             return true;
         }
     }

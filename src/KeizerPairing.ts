@@ -1,5 +1,6 @@
 import { promises as fsPromises } from "fs";
 import { join } from 'path';
+// const _ = require('lodash')
 
 /**
  * 
@@ -13,6 +14,7 @@ class Player {
     colorAllocation: string[];
     opponentSeed: number[];
     roundResult: string[];
+    paired: boolean
 
     // OPTIONAL
     // sex: string;
@@ -33,6 +35,7 @@ class Player {
         this.colorAllocation = [];
         this.opponentSeed = [];
         this.roundResult = [];
+        this.paired = false;
     }
 }
 
@@ -51,6 +54,12 @@ enum color{
     white = 'w'
 }
 
+const discardRules = {
+    rule2: 0,
+    rule3: 0,
+    rule4: 0
+
+}
 var totalNumberOfRounds = 1; // base case: number of round == 1
 var currentNumOfRounds = 0; 
 
@@ -163,7 +172,7 @@ async function KeizerPairing(filename: string): Promise<void> {
     
     // calls the asyncReadFile function to receive sanitised file (players data only)
     let playersArray = await asyncReadFile(filename); 
-    console.log(currentNumOfRounds)
+    console.log("Current number of rounds: " + currentNumOfRounds)
     
     for(let round = 1; round <= currentNumOfRounds; round++){
 
@@ -244,7 +253,7 @@ function CalculateKeizerScore(playersArray: Player[], round: number){
                     break;
             }
         }
-        console.log(player.keizerScore)
+        // console.log(player.keizerScore)
     }
 }
 
@@ -264,39 +273,77 @@ function SortByKeizerScore(playersArray: Player[]){
  * @param playersArray 
  */
 function PlayerPairing(playersArray: Player[]){
-
     let matchupArray : Player[][] = [];
     console.log(Math.ceil(playersArray.length/2));
 
     if(playersArray.length%2 === 0){
-        for(let i = 0; i < playersArray.length; i += 2){
-            //regular pairing
-            if(tryMatchUp(playersArray[i], playersArray[i+1])){
-                matchupArray.push([playersArray[i], playersArray[i+1]]);
-            }else{ //do re-pair
-                
+        for(let i = 0; i < playersArray.length; i++){
+            if(!playersArray[i].paired){
+                if(tryMatchUp(playersArray[i], playersArray[i+1])){
+                    matchupArray.push([playersArray[i], playersArray[i+1]]);
+                }else{ 
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule4 = 1
+                        }
+                    }
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule3 = 1
+                        }
+                    }
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule2 = 1
+                        }
+                    }
+                    tryNext(playersArray, matchupArray, i)
+                }
             }
         }
     }else if(playersArray.length%2 === 1){
         let bye: Player = new Player()
-        for(let i = 0; i < playersArray.length; i += 2){
+        for(let i = 0; i < playersArray.length; i++){
             if(i === playersArray.length - 1){ 
                 if(!sameBye){
                     matchupArray.push([playersArray[i], bye]);
-                }else{ // do re-pair
-                    
+                }else{
+                    let breakPair: Player[] = breakNextPair(matchupArray);
+                    if(tryMatchUp(breakPair[1], playersArray[i])){
+                        matchupArray.push([breakPair[1], playersArray[i]])
+                        matchupArray.push([breakPair[0], bye])
+                    }else if(tryMatchUp(breakPair[0], playersArray[i])){
+                        matchupArray.push([breakPair[0], playersArray[i]])
+                        matchupArray.push([breakPair[1], bye])
+                    }
                 }
+
             }else{
-                //regular pairing
                 if(tryMatchUp(playersArray[i], playersArray[i+1])){
                     matchupArray.push([playersArray[i], playersArray[i+1]]);
-                }else{ //do re-pair
-                    
+                }else{ 
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule4 = 1
+                        }
+                    }
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule3 = 1
+                        }
+                    }
+                    if(!tryNext(playersArray, matchupArray, i)){
+                        if(!rePair(playersArray, matchupArray, i)){
+                            discardRules.rule2 = 1
+                        }
+                    }
+                    tryNext(playersArray, matchupArray, i)
                 }
             }
         }
     }
 
+    //printing purposes
     for(let i = 0; i < matchupArray.length; i++){
         console.log(matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank);
     }
@@ -309,11 +356,15 @@ function sameBye(player: Player): boolean{
     return false
 }
 
-function tryMatchUp(player1: Player, player2: Player): boolean{
-    if(!sameOpponent(player1, player2)){
-        if(!sameColourHistory(player1, player2)){
-            if(!sameColourScore(player1, player2)){
-                return true;
+function tryMatchUp(player1: Player, player2: Player, ): boolean{
+    if(!player2.paired){
+        if(discardRules.rule2 || !sameOpponent(player1, player2)){
+            if(discardRules.rule3 || !sameColourHistory(player1, player2)){
+                if(discardRules.rule4 || !sameColourScore(player1, player2)){
+                    player1.paired = true
+                    player2.paired = true
+                    return true;
+                }
             }
         }
     }
@@ -321,8 +372,11 @@ function tryMatchUp(player1: Player, player2: Player): boolean{
 }
 
 function sameOpponent(player1: Player, player2: Player): boolean{
-    if(player1.opponentSeed[player1.opponentSeed.length-1] === player1.opponentSeed[player1.opponentSeed.length-2]){
-        if(player1.opponentSeed[player1.opponentSeed.length-1] === player2.startingRank){
+    let playerOpponentList: number[] = player1.opponentSeed;
+    let length: number = playerOpponentList.length;
+
+    if(playerOpponentList[length-1] === playerOpponentList[length-2]){
+        if(playerOpponentList[length-1] === player2.startingRank){
             console.log(player2.startingRank)
             return true
         }
@@ -331,9 +385,14 @@ function sameOpponent(player1: Player, player2: Player): boolean{
 }
 
 function sameColourHistory(player1: Player, player2: Player): boolean{
-    if(player1.colorAllocation[player1.colorAllocation.length-1] === player1.colorAllocation[player1.colorAllocation.length-2]){
-        if(player2.colorAllocation[player2.colorAllocation.length-1] === player1.colorAllocation[player1.colorAllocation.length-1] && 
-            player2.colorAllocation[player2.colorAllocation.length-2] === player1.colorAllocation[player1.colorAllocation.length-2]){
+    let p1ColorList: string[] = player1.colorAllocation;
+    let p2ColorList: string[] = player2.colorAllocation;
+    let p1Listlength = p1ColorList.length;
+    let p2Listlength = p2ColorList.length;
+
+    if(p1ColorList[p1Listlength-1] === p1ColorList[p1Listlength-2]){
+        if(p2ColorList[p2Listlength-1] === p1ColorList[p1Listlength-1] && 
+            p2ColorList[p2Listlength-2] === p1ColorList[p1Listlength-2]){
                 return true
         }
     }
@@ -367,7 +426,7 @@ function sameColourScore(player1: Player, player2: Player){
     }
 
     if(p1ColorScore === p2ColorScore){
-        if(p1ColorScore === 2 || p1ColorScore === -2){
+        if(p1ColorScore >= 2 || p1ColorScore <= -2){
             return true
         }
     }
@@ -375,11 +434,88 @@ function sameColourScore(player1: Player, player2: Player){
     return false
 }
 
-// function rePair(){
+function tryNext(playersArray: Player[], matchupArray: Player[][], i: number): boolean{
+    let nextTry: number = i+2;
+    //trying downwards
+    for(nextTry; nextTry < playersArray.length; nextTry++){
+        if(tryMatchUp(playersArray[i], playersArray[nextTry])){
+            matchupArray.push([playersArray[i], playersArray[nextTry]]);
+            playersArray[i].paired = true;
+            playersArray[nextTry].paired = true;
+            return true;
+        }
+    }
+    return false;
+}
 
-// }
+function recursionPairing(playersArray: Player[], matchupArray: Player[][], end: number): boolean{
+    //break next pair
+    let brokenPair: Player[] = breakNextPair(matchupArray)
+    if(brokenPair === undefined){
+        return false;
+    }
+    
+    let i: number = playersArray.indexOf(brokenPair[1]) + 1;
+    
+    while(matchupArray.length != Math.ceil(end/2)){
+        for(i; i <= end; i++){
+            for(let j = 0; j < brokenPair.length; j++){
+                if(tryMatchUp(brokenPair[j], playersArray[i])){
+                    matchupArray.push([brokenPair[j], playersArray[i]]);
+                }
+            }
+        }
+        let remainingPlayers: Player[] = [];
+        for(let k = 0; k < end; k++){
+            if(!playersArray[k].paired){
+                remainingPlayers.push(playersArray[k]);
+            }
+        }
+        if(remainingPlayers.length%2 === 0){
+            for(let x = 0; x < remainingPlayers.length; x+2){
+                if(tryMatchUp(remainingPlayers[x], remainingPlayers[x+1])){
+                    matchupArray.push([remainingPlayers[x], remainingPlayers[x+1]]); //this should satisfy while loop
+                }else{
+                    recursionPairing(playersArray, matchupArray, end)
+                }
+            }    
+        }
+    }
+    return true;
+}
 
-// KeizerPairing("../TRFx/sample-keizer-pairing--1.trf");
+function breakNextPair(matchupArray: Player[][]): Player[]{
+    let brokenPair: Player[] = matchupArray[matchupArray.length-1];
+    brokenPair[0].paired = false;
+    brokenPair[1].paired = false;
+    matchupArray.pop();
+    return brokenPair;
+}
+
+function rePair(playersArray: Player[], matchupArray: Player[][], i: number): boolean{
+    let end = i+1;
+    if(matchupArray.length === 0){
+        return false;
+    }
+
+    let brokenPair: Player[] = breakNextPair(matchupArray)
+    matchupArray.pop();
+
+    if(tryMatchUp(brokenPair[0], playersArray[i]) && tryMatchUp(brokenPair[1], playersArray[i+1])){
+        matchupArray.push([brokenPair[0], playersArray[i]]);
+        matchupArray.push([brokenPair[1], playersArray[i+1]]);
+    }else if(tryMatchUp(brokenPair[0], playersArray[i+1]) && tryMatchUp(brokenPair[1], playersArray[i])){
+        matchupArray.push([brokenPair[0], playersArray[i]]);
+        matchupArray.push([brokenPair[1], playersArray[i+1]]);
+    }else{
+        if(recursionPairing(playersArray, matchupArray, end)){
+            return true;
+        }
+    }
+
+    return false;
+}
+
 KeizerPairing("../TRFx/david-keizer-pairing.trf");
 
 
