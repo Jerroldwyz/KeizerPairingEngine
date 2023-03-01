@@ -3,7 +3,7 @@ import { join } from 'path';
 // const _ = require('lodash')
 
 /**
- * 
+ * The class of a Player in the chess tournament
  */
 class Player {
     startingRank: number; 
@@ -40,7 +40,7 @@ class Player {
 }
 
 /**
- * 
+ * The possible match outcomes
  */
 enum matchOutcome {
     win = '1',
@@ -49,23 +49,28 @@ enum matchOutcome {
     pairingAllocatedBye = 'U'
 }
 
+/**
+ * The colors a player can be assigned to
+ */
 enum color{
     black = 'b',
     white = 'w'
 }
 
+/**
+ * Used as boolean flags for each rule to be discarded or not
+ */
 const discardRules = {
     rule2: 0,
     rule3: 0,
     rule4: 0
-
 }
 var totalNumberOfRounds = 1; // base case: number of round == 1
-var currentNumOfRounds = 0; 
+var currentNumOfRounds = 0;  // A competition can have say 7 rounds but this would store the current round of it
 
 /**
  * This function reads the TRFx file asynchronously without blocking the thread
- * and sanitises the file to retrieve useful lines.
+ * and splits the file to retrieve useful lines.
  * 
  * @param filename - The name of the file. Format: './filename.extension', '../folder/filename.extension'
  * @returns An array of Player objects with their data.
@@ -89,9 +94,10 @@ async function asyncReadFile(filename: string) {
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param TRFxFileSplit 
- * @param playersArray 
+ * Extracts the data from useful lines of the TRFx File such as the round number and player's meta data
+ * 
+ * @param TRFxFileSplit The lines of useful data from @asyncReadFile
+ * @param playersArray An array of Player objects with their data.
  */
 function DataExtraction(TRFxFileSplit: string[], playersArray: Player[]){
     for (let row = 0; row < TRFxFileSplit.length; row++){
@@ -104,9 +110,10 @@ function DataExtraction(TRFxFileSplit: string[], playersArray: Player[]){
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param TRFxFileSplit 
- * @param row 
+ * Extracts the current round number and stores it in @totalNumberOfRounds
+ * 
+ * @param TRFxFileSplit The lines of useful data from @asyncReadFile
+ * @param row The row in which stores the total number of rounds in the tournament
  */
 function RoundsExtraction(TRFxFileSplit: string[], row: number){
     if(TRFxFileSplit[row].substring(0,3) == 'XXR'){ // XXR represents the number of round played in tournament
@@ -115,10 +122,11 @@ function RoundsExtraction(TRFxFileSplit: string[], row: number){
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param TRFxFileSplit 
- * @param row 
- * @param playersArray 
+ * Extracts all player data 
+ * 
+ * @param TRFxFileSplit The lines of useful data from @asyncReadFile
+ * @param row The row in which stores the meta data of the player
+ * @param playersArray An array of Player objects with their data.
  */
 function PlayerDataExtraction(TRFxFileSplit: string[], row: number, playersArray: Player[]){
     if(TRFxFileSplit[row].substring(0,3) === '001'){
@@ -135,10 +143,11 @@ function PlayerDataExtraction(TRFxFileSplit: string[], row: number, playersArray
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param TRFxFileSplit 
- * @param row 
- * @param player 
+ * Extracts the match history of a player
+ * 
+ * @param TRFxFileSplit The lines of useful data from @asyncReadFile
+ * @param row The row in which stores the meta data of the player
+ * @param player The current iteration of player 
  */
 function MatchDataExtraction(TRFxFileSplit: string[], row: number, player: Player){
     let opponentIndex: number = 91; // opponent seed until index 94 (substring is exclusive of end)
@@ -163,7 +172,8 @@ function MatchDataExtraction(TRFxFileSplit: string[], row: number, player: Playe
 }
 
 /**
- * This function is incomplete, but it should encompass the algorithm for the Keizer pairing system.
+ * This function is the main function of the algorithm. It calls many other sub-functions to in the end create
+ * pairs of players to be matched against each other.
  * 
  * @param filename - The name of the file. Format: './filename.extension', '../folder/filename.extension'
  * @returns Returns void but should write pairings into an external text file.
@@ -201,8 +211,10 @@ async function KeizerPairing(filename: string): Promise<void> {
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param playersArray 
+ * Calculates the Keizer value to be assigned to the bottom ranked player such that the top ranked player's
+ * Keizer value is approximately 3 times the bottom ranked player
+ * 
+ * @param playersArray An array of Player objects with their data.
  */
 function AssignKeizerValue(playersArray: Player[]){
     let bottomKeizerValue = Math.floor(playersArray.length/2);
@@ -213,8 +225,9 @@ function AssignKeizerValue(playersArray: Player[]){
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param playersArray 
+ * A simple sort algorithm to sort the players in the players array based on starting rank
+ * 
+ * @param playersArray An array of Player objects with their data.
  */
 function SortByStartingRank(playersArray: Player[]){
     playersArray.sort(
@@ -223,9 +236,10 @@ function SortByStartingRank(playersArray: Player[]){
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param playersArray 
- * @param round 
+ * Calculates the keizer score of a player based on the results of the match in the current round
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param round The current iteration of round being calculated 
  */
 function CalculateKeizerScore(playersArray: Player[], round: number){
     for(let index = 0; index < playersArray.length; index++){
@@ -258,8 +272,9 @@ function CalculateKeizerScore(playersArray: Player[], round: number){
 }
 
 /**
- * TOBEIMPLEMENTED
- * @param playersArray 
+ * A simple sort algorithm to sort the players in the players array based on keizer score
+ * 
+ * @param playersArray An array of Player objects with their data.
  */
 function SortByKeizerScore(playersArray: Player[]){
     playersArray.sort(
@@ -268,9 +283,13 @@ function SortByKeizerScore(playersArray: Player[]){
 }
 
 /**
- * TOBEIMPLEMENTED
- * output is always W B
- * @param playersArray 
+ * Pairs the players up based on their ranking of Keizer score and value. The matchup should always be as
+ * interesting as possible. Hence, the top ranked player would go against the second ranked player. If it is
+ * not possible due to rules restriction then top ranked player would player against third ranked player.
+ * 
+ * Output is always White then Black. Eg: 1 2 means player 1 is white and player 2 is black
+ * 
+ * @param playersArray An array of Player objects with their data.
  */
 function PlayerPairing(playersArray: Player[]){
     let matchupArray : Player[][] = [];
@@ -349,6 +368,13 @@ function PlayerPairing(playersArray: Player[]){
     }
 }
 
+/**
+ * The first rule of pairing. 
+ * A player cannot be paired against a bye 3 times in a row.
+ * 
+ * @param player The current player being iterated
+ * @returns A boolean to depict whether the player has been the same bye for 2 consective rounds or not
+ */
 function sameBye(player: Player): boolean{
     if(player.roundResult[-1] === "U" && player.roundResult[-2] === "U"){
         return true
@@ -356,6 +382,14 @@ function sameBye(player: Player): boolean{
     return false
 }
 
+/**
+ * This function tries a matchup between two players taken in as parameters.
+ * If no rules are broken, they can be paired against each other.
+ * 
+ * @param player1 The first player 
+ * @param player2 The second player
+ * @returns A boolean whether the match up is successful or not
+ */
 function tryMatchUp(player1: Player, player2: Player, ): boolean{
     if(!player2.paired){
         if(discardRules.rule2 || !sameOpponent(player1, player2)){
@@ -371,6 +405,14 @@ function tryMatchUp(player1: Player, player2: Player, ): boolean{
     return false;
 }
 
+/**
+ * Second rule of pairing.
+ * A player cannot play against the same player 3 times in a row.
+ * 
+ * @param player1 The first player
+ * @param player2 The second player
+ * @returns A boolean whether the players have played against each other consecutively
+ */
 function sameOpponent(player1: Player, player2: Player): boolean{
     let playerOpponentList: number[] = player1.opponentSeed;
     let length: number = playerOpponentList.length;
@@ -384,6 +426,14 @@ function sameOpponent(player1: Player, player2: Player): boolean{
     return false
 }
 
+/**
+ * The third rule.
+ * Two players must not have the same colour history as they cannot play the same colour 3 games in a row.
+ * 
+ * @param player1 The first player
+ * @param player2 The second player
+ * @returns A boolean on whether the colour history of the players are the same
+ */
 function sameColourHistory(player1: Player, player2: Player): boolean{
     let p1ColorList: string[] = player1.colorAllocation;
     let p2ColorList: string[] = player2.colorAllocation;
@@ -399,6 +449,17 @@ function sameColourHistory(player1: Player, player2: Player): boolean{
     return false
 }
 
+/**
+ * The fourth rule.
+ * Two players must not have the same colour score balance of 2 or -2.
+ * 
+ * Everytime a player plays as a White, the colour balance increase by 1.
+ * Everytime a player plays as a Black, the colour balance decrease by 1.
+ * 
+ * @param player1 The first player
+ * @param player2 The second player
+ * @returns A boolean on whether the two players have the same colour score 
+ */
 function sameColourScore(player1: Player, player2: Player){
     let p1ColorScore: number = 0;
     let p2ColorScore: number = 0;
@@ -434,6 +495,14 @@ function sameColourScore(player1: Player, player2: Player){
     return false
 }
 
+/**
+ * Tries the next possible opponent of any given player, iterating down the list of playersArray.
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players
+ * @param i The current index of the player in playersArray
+ * @returns A boolean of whether any matchups are possible
+ */
 function tryNext(playersArray: Player[], matchupArray: Player[][], i: number): boolean{
     let nextTry: number = i+2;
     //trying downwards
@@ -448,6 +517,15 @@ function tryNext(playersArray: Player[], matchupArray: Player[][], i: number): b
     return false;
 }
 
+/**
+ * A recursion function of trying matchups, iterating upwards the list of playersArray.
+ * Breaking pairs as neccessary to look for a suitable matchup.
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players
+ * @param end The last index of player needed to iterate to cut a few iterations
+ * @returns A boolean on whether a matchup is found 
+ */
 function recursionPairing(playersArray: Player[], matchupArray: Player[][], end: number): boolean{
     //break next pair
     let brokenPair: Player[] = breakNextPair(matchupArray)
@@ -484,6 +562,12 @@ function recursionPairing(playersArray: Player[], matchupArray: Player[][], end:
     return true;
 }
 
+/**
+ * Pops the last element from matchupArray to be stored in brokenPair
+ * 
+ * @param matchupArray An array that consists of the match up pairing of players
+ * @returns A couple of player that was formerly a pair, broken to be tried for other pairings
+ */
 function breakNextPair(matchupArray: Player[][]): Player[]{
     let brokenPair: Player[] = matchupArray[matchupArray.length-1];
     brokenPair[0].paired = false;
@@ -492,6 +576,15 @@ function breakNextPair(matchupArray: Player[][]): Player[]{
     return brokenPair;
 }
 
+/**
+ * This function starts the chain of re-pairing players when no suitable matchups are found iterating down the list
+ * of playersArray.
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players
+ * @param i Current iteration of player in playersArray
+ * @returns A boolean on whether a matchup is found 
+ */
 function rePair(playersArray: Player[], matchupArray: Player[][], i: number): boolean{
     let end = i+1;
     if(matchupArray.length === 0){
@@ -516,6 +609,9 @@ function rePair(playersArray: Player[], matchupArray: Player[][], i: number): bo
     return false;
 }
 
+/**
+ * Calling the main function
+ */
 KeizerPairing("../TRFx/david-keizer-pairing.trf");
 
 
