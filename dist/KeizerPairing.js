@@ -23,6 +23,7 @@ class Player {
         this.opponentSeed = [];
         this.roundResult = [];
         this.paired = false;
+        this.absent = false;
     }
 }
 var matchOutcome;
@@ -44,6 +45,7 @@ const discardRules = {
 };
 var totalNumberOfRounds = 1;
 var currentNumOfRounds = 0;
+var absentPlayers = [];
 function syncWriteFile(filename, data) {
     (0, fs_1.writeFileSync)((0, path_1.join)(__dirname, filename), data, {
         flag: 'w'
@@ -67,12 +69,26 @@ function asyncReadFile(filename) {
 function DataExtraction(TRFxFileSplit, playersArray) {
     for (let row = 0; row < TRFxFileSplit.length; row++) {
         RoundsExtraction(TRFxFileSplit, row);
+        AbsenceExtraction(TRFxFileSplit, row);
         PlayerDataExtraction(TRFxFileSplit, row, playersArray);
+    }
+}
+function AbsenceExtraction(TRFxFileSplit, row) {
+    if (TRFxFileSplit[row].substring(0, 3) == 'XXZ') {
+        let result = TRFxFileSplit[row].split(" ");
+        for (let i = 1; i < result.length; i++) {
+            absentPlayers.push(+result[i]);
+        }
     }
 }
 function RoundsExtraction(TRFxFileSplit, row) {
     if (TRFxFileSplit[row].substring(0, 3) == 'XXR') {
-        totalNumberOfRounds = +(TRFxFileSplit[row][4] + TRFxFileSplit[row][5]);
+        if (TRFxFileSplit[row][5] != undefined) {
+            totalNumberOfRounds = +(TRFxFileSplit[row][4] + TRFxFileSplit[row][5]);
+        }
+        else {
+            totalNumberOfRounds = +TRFxFileSplit[row][4];
+        }
     }
 }
 function PlayerDataExtraction(TRFxFileSplit, row, playersArray) {
@@ -105,20 +121,28 @@ function MatchDataExtraction(TRFxFileSplit, row, player) {
 function KeizerPairing(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         let playersArray = yield asyncReadFile(filename);
+        for (let i = 0; i < absentPlayers.length; i++) {
+            playersArray[absentPlayers[i] - 1].absent = true;
+        }
         for (let round = 1; round <= currentNumOfRounds; round++) {
             AssignKeizerValue(playersArray);
             SortByStartingRank(playersArray);
             CalculateKeizerScore(playersArray, round);
             SortByKeizerScore(playersArray);
         }
+        for (let i = 0; i < absentPlayers.length; i++) {
+            playersArray.pop();
+        }
         PlayerPairing(playersArray);
     });
 }
 function AssignKeizerValue(playersArray) {
-    let bottomKeizerValue = Math.floor(playersArray.length / 2);
+    let bottomKeizerValue = Math.floor((playersArray.length - absentPlayers.length) / 2);
     for (let i = playersArray.length - 1; i >= 0; i--) {
-        playersArray[i].keizerValue = bottomKeizerValue;
-        bottomKeizerValue++;
+        if (!playersArray[i].absent) {
+            playersArray[i].keizerValue = bottomKeizerValue;
+            bottomKeizerValue++;
+        }
     }
 }
 function SortByStartingRank(playersArray) {
@@ -126,23 +150,25 @@ function SortByStartingRank(playersArray) {
 }
 function CalculateKeizerScore(playersArray, round) {
     for (let index = 0; index < playersArray.length; index++) {
-        let player = playersArray[index];
-        player.keizerScore = player.keizerValue;
-        for (let i = 0; i < round; i++) {
-            let opponent = playersArray[player.opponentSeed[i] - 1];
-            switch (player.roundResult[i]) {
-                case matchOutcome.win:
-                    player.keizerScore += opponent.keizerValue;
-                    break;
-                case matchOutcome.lose:
-                    player.keizerScore += 0;
-                    break;
-                case matchOutcome.draw:
-                    player.keizerScore += (opponent.keizerValue / 2);
-                    break;
-                case matchOutcome.pairingAllocatedBye:
-                    player.keizerScore = player.keizerScore * 2;
-                    break;
+        if (!playersArray[index].absent) {
+            let player = playersArray[index];
+            player.keizerScore = player.keizerValue;
+            for (let i = 0; i < round; i++) {
+                let opponent = playersArray[player.opponentSeed[i] - 1];
+                switch (player.roundResult[i]) {
+                    case matchOutcome.win:
+                        player.keizerScore += opponent.keizerValue;
+                        break;
+                    case matchOutcome.lose:
+                        player.keizerScore += 0;
+                        break;
+                    case matchOutcome.draw:
+                        player.keizerScore += (opponent.keizerValue / 2);
+                        break;
+                    case matchOutcome.pairingAllocatedBye:
+                        player.keizerScore = player.keizerScore * 2;
+                        break;
+                }
             }
         }
     }
@@ -162,19 +188,19 @@ function PlayerPairing(playersArray) {
                     if (!tryNext(playersArray, matchupArray, i)) {
                         if (!rePair(playersArray, matchupArray, i)) {
                             discardRules.rule4 = 1;
+                            if (!tryNext(playersArray, matchupArray, i)) {
+                                if (!rePair(playersArray, matchupArray, i)) {
+                                    discardRules.rule3 = 1;
+                                    if (!tryNext(playersArray, matchupArray, i)) {
+                                        if (!rePair(playersArray, matchupArray, i)) {
+                                            discardRules.rule2 = 1;
+                                            tryNext(playersArray, matchupArray, i);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                    if (!tryNext(playersArray, matchupArray, i)) {
-                        if (!rePair(playersArray, matchupArray, i)) {
-                            discardRules.rule3 = 1;
-                        }
-                    }
-                    if (!tryNext(playersArray, matchupArray, i)) {
-                        if (!rePair(playersArray, matchupArray, i)) {
-                            discardRules.rule2 = 1;
-                        }
-                    }
-                    tryNext(playersArray, matchupArray, i);
                 }
             }
         }
@@ -206,19 +232,19 @@ function PlayerPairing(playersArray) {
                     if (!tryNext(playersArray, matchupArray, i)) {
                         if (!rePair(playersArray, matchupArray, i)) {
                             discardRules.rule4 = 1;
+                            if (!tryNext(playersArray, matchupArray, i)) {
+                                if (!rePair(playersArray, matchupArray, i)) {
+                                    discardRules.rule3 = 1;
+                                    if (!tryNext(playersArray, matchupArray, i)) {
+                                        if (!rePair(playersArray, matchupArray, i)) {
+                                            discardRules.rule2 = 1;
+                                            tryNext(playersArray, matchupArray, i);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                    if (!tryNext(playersArray, matchupArray, i)) {
-                        if (!rePair(playersArray, matchupArray, i)) {
-                            discardRules.rule3 = 1;
-                        }
-                    }
-                    if (!tryNext(playersArray, matchupArray, i)) {
-                        if (!rePair(playersArray, matchupArray, i)) {
-                            discardRules.rule2 = 1;
-                        }
-                    }
-                    tryNext(playersArray, matchupArray, i);
                 }
             }
         }
@@ -320,7 +346,6 @@ function sameOpponent(player1, player2) {
     let length = playerOpponentList.length;
     if (playerOpponentList[length - 1] === playerOpponentList[length - 2]) {
         if (playerOpponentList[length - 1] === player2.startingRank) {
-            console.log(player2.startingRank);
             return true;
         }
     }
@@ -429,14 +454,15 @@ function rePair(playersArray, matchupArray, i) {
         return false;
     }
     let brokenPair = breakNextPair(matchupArray);
-    matchupArray.pop();
     if (tryMatchUp(brokenPair[0], playersArray[i]) && tryMatchUp(brokenPair[1], playersArray[i + 1])) {
         matchupArray.push([brokenPair[0], playersArray[i]]);
         matchupArray.push([brokenPair[1], playersArray[i + 1]]);
+        return true;
     }
     else if (tryMatchUp(brokenPair[0], playersArray[i + 1]) && tryMatchUp(brokenPair[1], playersArray[i])) {
         matchupArray.push([brokenPair[0], playersArray[i]]);
         matchupArray.push([brokenPair[1], playersArray[i + 1]]);
+        return true;
     }
     else {
         if (recursionPairing(playersArray, matchupArray, end)) {
@@ -446,6 +472,6 @@ function rePair(playersArray, matchupArray, i) {
     return false;
 }
 console.time('Execution Time');
-KeizerPairing("../TRFx/david-keizer-pairing.trf");
+KeizerPairing("../TRFx/sample-keizer-pairing--1-trf-for-pairing.trf");
 console.timeEnd('Execution Time');
 //# sourceMappingURL=KeizerPairing.js.map
