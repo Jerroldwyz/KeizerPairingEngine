@@ -1,6 +1,11 @@
-import { promises as fsPromises } from "fs";
+/**
+ * Reference to business document:
+ * https://docs.google.com/document/d/10H_l5gFt-NJk-jtQHTpYwPzMVda_vOlQbXjDhwSFeAY/edit#
+ * 
+ */
+
+import { promises as fsPromises, writeFileSync } from "fs";
 import { join } from 'path';
-// const _ = require('lodash')
 
 /**
  * The class of a Player in the chess tournament
@@ -12,6 +17,7 @@ class Player {
     keizerScore: number; 
     keizerValue: number;
     colorAllocation: string[];
+    colorScore: number;
     opponentSeed: number[];
     roundResult: string[];
     paired: boolean
@@ -33,6 +39,7 @@ class Player {
         this.keizerScore = 0;
         this.keizerValue = 0;
         this.colorAllocation = [];
+        this.colorScore = 0;
         this.opponentSeed = [];
         this.roundResult = [];
         this.paired = false;
@@ -65,8 +72,22 @@ const discardRules = {
     rule3: 0,
     rule4: 0
 }
+
 var totalNumberOfRounds = 1; // base case: number of round == 1
 var currentNumOfRounds = 0;  // A competition can have say 7 rounds but this would store the current round of it
+// var absentPlayers: number[] = [];
+
+/**
+ * Writes the data to an output file of extension .txt
+ * 
+ * @param filename The name of the file. Format: './filename.extension', '../folder/filename.extension'
+ * @param data String to be used as output
+ */
+function syncWriteFile(filename: string, data: any){
+    writeFileSync(join(__dirname, filename), data, {
+        flag: 'w'
+    })
+}
 
 /**
  * This function reads the TRFx file asynchronously without blocking the thread
@@ -109,6 +130,12 @@ function DataExtraction(TRFxFileSplit: string[], playersArray: Player[]){
     }
 }
 
+// function AbsenceExtraction(TRFxFileSplit: string[], row: number){
+//     if(TRFxFileSplit[row].substring(0,3) == 'XXZ'){ // XXZ represents the players skipping th round
+//         absentPlayers 
+//     }
+// }
+
 /**
  * Extracts the current round number and stores it in @totalNumberOfRounds
  * 
@@ -117,7 +144,8 @@ function DataExtraction(TRFxFileSplit: string[], playersArray: Player[]){
  */
 function RoundsExtraction(TRFxFileSplit: string[], row: number){
     if(TRFxFileSplit[row].substring(0,3) == 'XXR'){ // XXR represents the number of round played in tournament
-        totalNumberOfRounds = +TRFxFileSplit[row][4]; // element at index [4] is always the number of round (following the TRF documentation)
+        totalNumberOfRounds = +(TRFxFileSplit[row][4] + TRFxFileSplit[row][5]); // element at index [4] is always the number of round (following the TRF documentation)
+        // console.log(totalNumberOfRounds)
     }
 }
 
@@ -182,7 +210,7 @@ async function KeizerPairing(filename: string): Promise<void> {
     
     // calls the asyncReadFile function to receive sanitised file (players data only)
     let playersArray = await asyncReadFile(filename); 
-    console.log("Current number of rounds: " + currentNumOfRounds)
+    // console.log("Current number of rounds: " + currentNumOfRounds)
     
     for(let round = 1; round <= currentNumOfRounds; round++){
 
@@ -293,7 +321,7 @@ function SortByKeizerScore(playersArray: Player[]){
  */
 function PlayerPairing(playersArray: Player[]){
     let matchupArray : Player[][] = [];
-    console.log(Math.ceil(playersArray.length/2));
+    // console.log(Math.ceil(playersArray.length/2));
 
     if(playersArray.length%2 === 0){
         for(let i = 0; i < playersArray.length; i++){
@@ -362,9 +390,86 @@ function PlayerPairing(playersArray: Player[]){
         }
     }
 
-    //printing purposes
+    let output = Math.ceil(playersArray.length/2) + "\n";
+
+    colorPreferenceSort(matchupArray)
+
     for(let i = 0; i < matchupArray.length; i++){
-        console.log(matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank);
+        output += matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank + "\n"
+    }
+
+    syncWriteFile('../output/output.txt', output)
+
+}
+
+/**
+ * Sorts the player in the output based on player who gets the color preference 
+ * 
+ * @param matchupArray An array that consists of the match up pairing of players
+ */
+function colorPreferenceSort(matchupArray: Player[][]): void{
+    for(let i = 0; i < matchupArray.length; i++){
+        let player1: Player = matchupArray[i][0];
+        let player2: Player = matchupArray[i][1];
+        let preferencePlayer: Player = player1;
+        let secondPreference: Player = player2;
+
+        if(Math.abs(player1.colorScore) < Math.abs(player2.colorScore)){
+            preferencePlayer = player2;
+            secondPreference = player1;
+        }else if(player1.colorScore === player2.colorScore){
+            let p1ColorScore: number = 0;
+            let p1ColorArray: String[] = player1.colorAllocation;
+            let p1LastTwoRounds: String[] = [p1ColorArray[p1ColorArray.length-1], p1ColorArray[p1ColorArray.length-2]];
+            for(let i = 0; i < p1LastTwoRounds.length; i++){
+                switch(p1LastTwoRounds[i]){
+                    case color.black:
+                        p1ColorScore--;
+                        break;
+                    case color.white:
+                        p1ColorScore++;
+                        break;
+                }
+            }
+
+            let p2ColorScore: number = 0;
+            let p2ColorArray: String[] = player2.colorAllocation;
+            let p2LastTwoRounds: String[] = [p2ColorArray[p2ColorArray.length-1], p2ColorArray[p2ColorArray.length-2]];
+            for(let i = 0; i < p2LastTwoRounds.length; i++){
+                switch(p2LastTwoRounds[i]){
+                    case color.black:
+                        p2ColorScore--;
+                        break;
+                    case color.white:
+                        p2ColorScore++;
+                        break;
+                }
+            }
+
+            if(Math.abs(p1ColorScore) < Math.abs(p2ColorScore)){
+                preferencePlayer = player2;
+                secondPreference = player1;
+            }else if(p1ColorScore === p2ColorScore){
+                if(player1.keizerValue < player2.keizerValue){
+                    preferencePlayer = player2;
+                    secondPreference = player1;
+                }
+            }
+        }
+
+        if(preferencePlayer.colorScore === 0){
+            let lastRound: String = preferencePlayer.colorAllocation[preferencePlayer.colorAllocation.length - 1]
+            if(lastRound === 'w'){
+                matchupArray[i][1] = preferencePlayer;
+                matchupArray[i][0] = secondPreference;
+            }else if(lastRound === 'b'){
+                matchupArray[i][0] = preferencePlayer;
+                matchupArray[i][1] = secondPreference;
+            }
+        }else{
+            matchupArray[i][0] = preferencePlayer;
+            matchupArray[i][1] = secondPreference;
+        }
     }
 }
 
@@ -475,6 +580,8 @@ function sameColourScore(player1: Player, player2: Player){
         }
     }
 
+    player1.colorScore = p1ColorScore;
+
     for(let i = 0; i < player2.colorAllocation.length; i++){
         switch(player2.colorAllocation[i]){
             case color.black:
@@ -485,6 +592,8 @@ function sameColourScore(player1: Player, player2: Player){
                 break;
         }
     }
+
+    player2.colorScore = p2ColorScore;
 
     if(p1ColorScore === p2ColorScore){
         if(p1ColorScore >= 2 || p1ColorScore <= -2){
@@ -609,9 +718,15 @@ function rePair(playersArray: Player[], matchupArray: Player[][], i: number): bo
     return false;
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+console.time('Execution Time');
+
 /**
  * Calling the main function
  */
+// KeizerPairing("../TRFx/testing-tornelo-event--51-trf-for-pairing.trf");
 KeizerPairing("../TRFx/david-keizer-pairing.trf");
 
-
+console.timeEnd('Execution Time');

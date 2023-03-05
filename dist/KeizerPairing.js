@@ -19,6 +19,7 @@ class Player {
         this.keizerScore = 0;
         this.keizerValue = 0;
         this.colorAllocation = [];
+        this.colorScore = 0;
         this.opponentSeed = [];
         this.roundResult = [];
         this.paired = false;
@@ -43,6 +44,11 @@ const discardRules = {
 };
 var totalNumberOfRounds = 1;
 var currentNumOfRounds = 0;
+function syncWriteFile(filename, data) {
+    (0, fs_1.writeFileSync)((0, path_1.join)(__dirname, filename), data, {
+        flag: 'w'
+    });
+}
 function asyncReadFile(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -66,7 +72,7 @@ function DataExtraction(TRFxFileSplit, playersArray) {
 }
 function RoundsExtraction(TRFxFileSplit, row) {
     if (TRFxFileSplit[row].substring(0, 3) == 'XXR') {
-        totalNumberOfRounds = +TRFxFileSplit[row][4];
+        totalNumberOfRounds = +(TRFxFileSplit[row][4] + TRFxFileSplit[row][5]);
     }
 }
 function PlayerDataExtraction(TRFxFileSplit, row, playersArray) {
@@ -99,7 +105,6 @@ function MatchDataExtraction(TRFxFileSplit, row, player) {
 function KeizerPairing(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         let playersArray = yield asyncReadFile(filename);
-        console.log("Current number of rounds: " + currentNumOfRounds);
         for (let round = 1; round <= currentNumOfRounds; round++) {
             AssignKeizerValue(playersArray);
             SortByStartingRank(playersArray);
@@ -147,7 +152,6 @@ function SortByKeizerScore(playersArray) {
 }
 function PlayerPairing(playersArray) {
     let matchupArray = [];
-    console.log(Math.ceil(playersArray.length / 2));
     if (playersArray.length % 2 === 0) {
         for (let i = 0; i < playersArray.length; i++) {
             if (!playersArray[i].paired) {
@@ -219,8 +223,76 @@ function PlayerPairing(playersArray) {
             }
         }
     }
+    let output = Math.ceil(playersArray.length / 2) + "\n";
+    colorPreferenceSort(matchupArray);
     for (let i = 0; i < matchupArray.length; i++) {
-        console.log(matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank);
+        output += matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank + "\n";
+    }
+    syncWriteFile('../output/output.txt', output);
+}
+function colorPreferenceSort(matchupArray) {
+    for (let i = 0; i < matchupArray.length; i++) {
+        let player1 = matchupArray[i][0];
+        let player2 = matchupArray[i][1];
+        let preferencePlayer = player1;
+        let secondPreference = player2;
+        if (Math.abs(player1.colorScore) < Math.abs(player2.colorScore)) {
+            preferencePlayer = player2;
+            secondPreference = player1;
+        }
+        else if (player1.colorScore === player2.colorScore) {
+            let p1ColorScore = 0;
+            let p1ColorArray = player1.colorAllocation;
+            let p1LastTwoRounds = [p1ColorArray[p1ColorArray.length - 1], p1ColorArray[p1ColorArray.length - 2]];
+            for (let i = 0; i < p1LastTwoRounds.length; i++) {
+                switch (p1LastTwoRounds[i]) {
+                    case color.black:
+                        p1ColorScore--;
+                        break;
+                    case color.white:
+                        p1ColorScore++;
+                        break;
+                }
+            }
+            let p2ColorScore = 0;
+            let p2ColorArray = player2.colorAllocation;
+            let p2LastTwoRounds = [p2ColorArray[p2ColorArray.length - 1], p2ColorArray[p2ColorArray.length - 2]];
+            for (let i = 0; i < p2LastTwoRounds.length; i++) {
+                switch (p2LastTwoRounds[i]) {
+                    case color.black:
+                        p2ColorScore--;
+                        break;
+                    case color.white:
+                        p2ColorScore++;
+                        break;
+                }
+            }
+            if (Math.abs(p1ColorScore) < Math.abs(p2ColorScore)) {
+                preferencePlayer = player2;
+                secondPreference = player1;
+            }
+            else if (p1ColorScore === p2ColorScore) {
+                if (player1.keizerValue < player2.keizerValue) {
+                    preferencePlayer = player2;
+                    secondPreference = player1;
+                }
+            }
+        }
+        if (preferencePlayer.colorScore === 0) {
+            let lastRound = preferencePlayer.colorAllocation[preferencePlayer.colorAllocation.length - 1];
+            if (lastRound === 'w') {
+                matchupArray[i][1] = preferencePlayer;
+                matchupArray[i][0] = secondPreference;
+            }
+            else if (lastRound === 'b') {
+                matchupArray[i][0] = preferencePlayer;
+                matchupArray[i][1] = secondPreference;
+            }
+        }
+        else {
+            matchupArray[i][0] = preferencePlayer;
+            matchupArray[i][1] = secondPreference;
+        }
     }
 }
 function sameBye(player) {
@@ -280,6 +352,7 @@ function sameColourScore(player1, player2) {
                 break;
         }
     }
+    player1.colorScore = p1ColorScore;
     for (let i = 0; i < player2.colorAllocation.length; i++) {
         switch (player2.colorAllocation[i]) {
             case color.black:
@@ -290,6 +363,7 @@ function sameColourScore(player1, player2) {
                 break;
         }
     }
+    player2.colorScore = p2ColorScore;
     if (p1ColorScore === p2ColorScore) {
         if (p1ColorScore >= 2 || p1ColorScore <= -2) {
             return true;
@@ -371,5 +445,7 @@ function rePair(playersArray, matchupArray, i) {
     }
     return false;
 }
+console.time('Execution Time');
 KeizerPairing("../TRFx/david-keizer-pairing.trf");
+console.timeEnd('Execution Time');
 //# sourceMappingURL=KeizerPairing.js.map
