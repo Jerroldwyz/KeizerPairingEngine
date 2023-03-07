@@ -236,11 +236,11 @@ async function KeizerPairing(filename: string): Promise<void> {
         AssignKeizerValue(playersArray);
 
         SortByStartingRank(playersArray);
-
+        
         CalculateKeizerScore(playersArray, round);
-
+        
         SortByKeizerScore(playersArray);
-
+        
     }
 
     for(let i = 0; i < absentPlayers.length; i++){
@@ -361,34 +361,36 @@ function PlayerPairing(playersArray: Player[]){
     }else if(playersArray.length%2 === 1){
         let bye: Player = new Player()
         for(let i = 0; i < playersArray.length; i++){
-            if(i === playersArray.length - 1){ 
-                if(!sameBye){
-                    matchupArray.push([playersArray[i], bye]);
-                }else{
-                    let breakPair: Player[] = breakNextPair(matchupArray);
-                    if(tryMatchUp(breakPair[1], playersArray[i])){
-                        matchupArray.push([breakPair[1], playersArray[i]])
-                        matchupArray.push([breakPair[0], bye])
-                    }else if(tryMatchUp(breakPair[0], playersArray[i])){
-                        matchupArray.push([breakPair[0], playersArray[i]])
-                        matchupArray.push([breakPair[1], bye])
+            if(!playersArray[i].paired){
+                if(i === playersArray.length - 1 || playersArray[playersArray.length - 1].paired){ 
+                    if(!sameBye(playersArray[i])){
+                        matchupArray.push([playersArray[i], bye]);
+                    }else{
+                        let breakPair: Player[] = breakNextPair(matchupArray);
+                        if(tryMatchUp(breakPair[1], playersArray[i])){
+                            matchupArray.push([breakPair[1], playersArray[i]])
+                            matchupArray.push([breakPair[0], bye])
+                        }else if(tryMatchUp(breakPair[0], playersArray[i])){
+                            matchupArray.push([breakPair[0], playersArray[i]])
+                            matchupArray.push([breakPair[1], bye])
+                        }
                     }
-                }
 
-            }else{
-                if(tryMatchUp(playersArray[i], playersArray[i+1])){
-                    matchupArray.push([playersArray[i], playersArray[i+1]]);
-                }else{ 
-                    if(!tryNext(playersArray, matchupArray, i)){
-                        if(!rePair(playersArray, matchupArray, i)){
-                            discardRules.rule4 = 1
-                            if(!tryNext(playersArray, matchupArray, i)){
-                                if(!rePair(playersArray, matchupArray, i)){
-                                    discardRules.rule3 = 1
-                                    if(!tryNext(playersArray, matchupArray, i)){
-                                        if(!rePair(playersArray, matchupArray, i)){
-                                            discardRules.rule2 = 1
-                                            tryNext(playersArray, matchupArray, i)
+                }else{
+                    if(tryMatchUp(playersArray[i], playersArray[i+1])){
+                        matchupArray.push([playersArray[i], playersArray[i+1]]);
+                    }else{ 
+                        if(!tryNext(playersArray, matchupArray, i)){
+                            if(!rePair(playersArray, matchupArray, i)){
+                                discardRules.rule4 = 1
+                                if(!tryNext(playersArray, matchupArray, i)){
+                                    if(!rePair(playersArray, matchupArray, i)){
+                                        discardRules.rule3 = 1
+                                        if(!tryNext(playersArray, matchupArray, i)){
+                                            if(!rePair(playersArray, matchupArray, i)){
+                                                discardRules.rule2 = 1
+                                                tryNext(playersArray, matchupArray, i)
+                                            }
                                         }
                                     }
                                 }
@@ -506,7 +508,7 @@ function sameBye(player: Player): boolean{
  * @returns A boolean whether the match up is successful or not
  */
 function tryMatchUp(player1: Player, player2: Player, ): boolean{
-    if(!player2.paired){
+    if(!player1.paired && !player2.paired){
         if(discardRules.rule2 || !sameOpponent(player1, player2)){
             if(discardRules.rule3 || !sameColourHistory(player1, player2)){
                 if(discardRules.rule4 || !sameColourScore(player1, player2)){
@@ -736,8 +738,9 @@ console.time('Execution Time');
 /**
  * Calling the main function
  */
-// KeizerPairing("../TRFx/testing-tornelo-event--51-trf-for-pairing.trf");
-KeizerPairing("../TRFx/sample-keizer-pairing--1-trf-for-pairing.trf");
+KeizerPairing("../TRFx/testing-tornelo-event--51-trf-for-pairing.trf");
+// KeizerPairing("../TRFx/sample-keizer-pairing--1-trf-for-pairing.trf");
 // KeizerPairing("../TRFx/david-keizer-pairing.trf");
+// KeizerPairing("../TRFx/sample-keizer-pairing--2.trf");
 
 console.timeEnd('Execution Time');
