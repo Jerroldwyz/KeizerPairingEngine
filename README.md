@@ -7,10 +7,9 @@ Front end pairing engine and framework in TypeScript.
 ## Communication
 1) Zoom Chat (Tornelo Pairing Project group chat) 
 2) Email <br />
-    a) Rafi Memon  memonrafiullah76@gmail.com <br />
-    b) Jerrold Wong  jerroldwongyz@gmail.com <br />
-    c) David Cordover  david@tornelo.com <br />
-    d) Simon Dale scd@thecrag.com	 <br />
+    a) Jerrold Wong  jerroldwongyz@gmail.com <br />
+    b) David Cordover  david@tornelo.com <br />
+    c) Simon Dale scd@thecrag.com	 <br />
   
 ## Background
 **Staging Environment for testing Tornelo:** <br />
