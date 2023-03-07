@@ -181,27 +181,7 @@ function PlayerPairing(playersArray) {
     if (playersArray.length % 2 === 0) {
         for (let i = 0; i < playersArray.length; i++) {
             if (!playersArray[i].paired) {
-                if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
-                    matchupArray.push([playersArray[i], playersArray[i + 1]]);
-                }
-                else {
-                    if (!tryNext(playersArray, matchupArray, i)) {
-                        if (!rePair(playersArray, matchupArray, i)) {
-                            discardRules.rule4 = 1;
-                            if (!tryNext(playersArray, matchupArray, i)) {
-                                if (!rePair(playersArray, matchupArray, i)) {
-                                    discardRules.rule3 = 1;
-                                    if (!tryNext(playersArray, matchupArray, i)) {
-                                        if (!rePair(playersArray, matchupArray, i)) {
-                                            discardRules.rule2 = 1;
-                                            tryNext(playersArray, matchupArray, i);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                matchMaking(playersArray, matchupArray, i);
             }
         }
     }
@@ -226,27 +206,7 @@ function PlayerPairing(playersArray) {
                     }
                 }
                 else {
-                    if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
-                        matchupArray.push([playersArray[i], playersArray[i + 1]]);
-                    }
-                    else {
-                        if (!tryNext(playersArray, matchupArray, i)) {
-                            if (!rePair(playersArray, matchupArray, i)) {
-                                discardRules.rule4 = 1;
-                                if (!tryNext(playersArray, matchupArray, i)) {
-                                    if (!rePair(playersArray, matchupArray, i)) {
-                                        discardRules.rule3 = 1;
-                                        if (!tryNext(playersArray, matchupArray, i)) {
-                                            if (!rePair(playersArray, matchupArray, i)) {
-                                                discardRules.rule2 = 1;
-                                                tryNext(playersArray, matchupArray, i);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    matchMaking(playersArray, matchupArray, i);
                 }
             }
         }
@@ -257,6 +217,29 @@ function PlayerPairing(playersArray) {
         output += matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank + "\n";
     }
     syncWriteFile('../output/output.txt', output);
+}
+function matchMaking(playersArray, matchupArray, i) {
+    if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
+        matchupArray.push([playersArray[i], playersArray[i + 1]]);
+    }
+    else {
+        if (!tryNext(playersArray, matchupArray, i)) {
+            if (!rePair(playersArray, matchupArray, i)) {
+                discardRules.rule4 = 1;
+                if (!tryNext(playersArray, matchupArray, i)) {
+                    if (!rePair(playersArray, matchupArray, i)) {
+                        discardRules.rule3 = 1;
+                        if (!tryNext(playersArray, matchupArray, i)) {
+                            if (!rePair(playersArray, matchupArray, i)) {
+                                discardRules.rule2 = 1;
+                                tryNext(playersArray, matchupArray, i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 function colorPreferenceSort(matchupArray) {
     for (let i = 0; i < matchupArray.length; i++) {
@@ -474,6 +457,6 @@ function rePair(playersArray, matchupArray, i) {
     return false;
 }
 console.time('Execution Time');
-KeizerPairing("../TRFx/sample-keizer-pairing--2.trf");
+KeizerPairing("../TRFx/testing-tornelo-event--51-trf-for-pairing.trf");
 console.timeEnd('Execution Time');
 //# sourceMappingURL=KeizerPairing.js.map

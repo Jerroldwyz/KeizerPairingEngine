@@ -336,72 +336,88 @@ function PlayerPairing(playersArray: Player[]){
     if(playersArray.length%2 === 0){
         for(let i = 0; i < playersArray.length; i++){
             if(!playersArray[i].paired){
-                if(tryMatchUp(playersArray[i], playersArray[i+1])){
-                    matchupArray.push([playersArray[i], playersArray[i+1]]);
-                }else{ 
-                    if(!tryNext(playersArray, matchupArray, i)){
-                        if(!rePair(playersArray, matchupArray, i)){
-                            discardRules.rule4 = 1
-                            if(!tryNext(playersArray, matchupArray, i)){
-                                if(!rePair(playersArray, matchupArray, i)){
-                                    discardRules.rule3 = 1
-                                    if(!tryNext(playersArray, matchupArray, i)){
-                                        if(!rePair(playersArray, matchupArray, i)){
-                                            discardRules.rule2 = 1
-                                            tryNext(playersArray, matchupArray, i)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }  
-                }
+                matchMaking(playersArray, matchupArray, i);
             }
         }
     }else if(playersArray.length%2 === 1){
-        let bye: Player = new Player()
         for(let i = 0; i < playersArray.length; i++){
             if(!playersArray[i].paired){
                 if(i === playersArray.length - 1 || playersArray[playersArray.length - 1].paired){ 
-                    if(!sameBye(playersArray[i])){
-                        matchupArray.push([playersArray[i], bye]);
-                    }else{
-                        let breakPair: Player[] = breakNextPair(matchupArray);
-                        if(tryMatchUp(breakPair[1], playersArray[i])){
-                            matchupArray.push([breakPair[1], playersArray[i]])
-                            matchupArray.push([breakPair[0], bye])
-                        }else if(tryMatchUp(breakPair[0], playersArray[i])){
-                            matchupArray.push([breakPair[0], playersArray[i]])
-                            matchupArray.push([breakPair[1], bye])
-                        }
-                    }
-
+                    allocateBye(playersArray, matchupArray, i);
                 }else{
-                    if(tryMatchUp(playersArray[i], playersArray[i+1])){
-                        matchupArray.push([playersArray[i], playersArray[i+1]]);
-                    }else{ 
-                        if(!tryNext(playersArray, matchupArray, i)){
-                            if(!rePair(playersArray, matchupArray, i)){
-                                discardRules.rule4 = 1
-                                if(!tryNext(playersArray, matchupArray, i)){
-                                    if(!rePair(playersArray, matchupArray, i)){
-                                        discardRules.rule3 = 1
-                                        if(!tryNext(playersArray, matchupArray, i)){
-                                            if(!rePair(playersArray, matchupArray, i)){
-                                                discardRules.rule2 = 1
-                                                tryNext(playersArray, matchupArray, i)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    matchMaking(playersArray, matchupArray, i);
                 }
             }
         }
     }
 
+    createOutput(playersArray, matchupArray)
+
+}
+
+/**
+ * Match makes the players in playersArray list, first trying with the next best matched player.
+ * If match up is not suitable, start iterating down the playersArray list to try other matchups.
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players.
+ * @param i The current index of the player in playersArray.
+ */
+function matchMaking(playersArray: Player[], matchupArray: Player[][], i: number){
+    if(tryMatchUp(playersArray[i], playersArray[i+1])){
+        matchupArray.push([playersArray[i], playersArray[i+1]]);
+
+    }else{ 
+        if(!tryNext(playersArray, matchupArray, i)){
+            if(!rePair(playersArray, matchupArray, i)){
+                discardRules.rule4 = 1
+                if(!tryNext(playersArray, matchupArray, i)){
+                    if(!rePair(playersArray, matchupArray, i)){
+                        discardRules.rule3 = 1
+                        if(!tryNext(playersArray, matchupArray, i)){
+                            if(!rePair(playersArray, matchupArray, i)){
+                                discardRules.rule2 = 1
+                                tryNext(playersArray, matchupArray, i)
+                            }
+                        }
+                    }
+                }
+            }
+        }  
+    }
+}
+
+/**
+ * Pairing a player with a Bye if they are the last player or if the last player is paired.
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players.
+ * @param i The current index of the player in playersArray.
+ */
+function allocateBye(playersArray: Player[], matchupArray: Player[][], i: number){
+    let bye: Player = new Player()
+    if(!sameBye(playersArray[i])){
+        matchupArray.push([playersArray[i], bye]);
+
+    }else{
+        let breakPair: Player[] = breakNextPair(matchupArray);
+        if(tryMatchUp(breakPair[1], playersArray[i])){
+            matchupArray.push([breakPair[1], playersArray[i]]);
+            matchupArray.push([breakPair[0], bye]);
+        }else if(tryMatchUp(breakPair[0], playersArray[i])){
+            matchupArray.push([breakPair[0], playersArray[i]]);
+            matchupArray.push([breakPair[1], bye]);
+        }
+    }
+}
+
+/**
+ * Writes the output into a txt file following structure of JaVaFo output format
+ * 
+ * @param playersArray An array of Player objects with their data.
+ * @param matchupArray An array that consists of the match up pairing of players.
+ */
+function createOutput(playersArray: Player[], matchupArray: Player[][]){
     let output = Math.ceil(playersArray.length/2) + "\n";
 
     colorPreferenceSort(matchupArray)
