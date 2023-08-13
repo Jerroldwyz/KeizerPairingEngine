@@ -186,24 +186,10 @@ function PlayerPairing(playersArray) {
         }
     }
     else if (playersArray.length % 2 === 1) {
-        let bye = new Player();
         for (let i = 0; i < playersArray.length; i++) {
             if (!playersArray[i].paired) {
                 if (i === playersArray.length - 1 || playersArray[playersArray.length - 1].paired) {
-                    if (!sameBye(playersArray[i])) {
-                        matchupArray.push([playersArray[i], bye]);
-                    }
-                    else {
-                        let breakPair = breakNextPair(matchupArray);
-                        if (tryMatchUp(breakPair[1], playersArray[i])) {
-                            matchupArray.push([breakPair[1], playersArray[i]]);
-                            matchupArray.push([breakPair[0], bye]);
-                        }
-                        else if (tryMatchUp(breakPair[0], playersArray[i])) {
-                            matchupArray.push([breakPair[0], playersArray[i]]);
-                            matchupArray.push([breakPair[1], bye]);
-                        }
-                    }
+                    allocateBye(playersArray, matchupArray, i);
                 }
                 else {
                     matchMaking(playersArray, matchupArray, i);
@@ -211,12 +197,7 @@ function PlayerPairing(playersArray) {
             }
         }
     }
-    let output = Math.ceil(playersArray.length / 2) + "\n";
-    colorPreferenceSort(matchupArray);
-    for (let i = 0; i < matchupArray.length; i++) {
-        output += matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank + "\n";
-    }
-    syncWriteFile('../output/output.txt', output);
+    createOutput(playersArray, matchupArray);
 }
 function matchMaking(playersArray, matchupArray, i) {
     if (tryMatchUp(playersArray[i], playersArray[i + 1])) {
@@ -240,6 +221,31 @@ function matchMaking(playersArray, matchupArray, i) {
             }
         }
     }
+}
+function allocateBye(playersArray, matchupArray, i) {
+    let bye = new Player();
+    if (!sameBye(playersArray[i])) {
+        matchupArray.push([playersArray[i], bye]);
+    }
+    else {
+        let breakPair = breakNextPair(matchupArray);
+        if (tryMatchUp(breakPair[1], playersArray[i])) {
+            matchupArray.push([breakPair[1], playersArray[i]]);
+            matchupArray.push([breakPair[0], bye]);
+        }
+        else if (tryMatchUp(breakPair[0], playersArray[i])) {
+            matchupArray.push([breakPair[0], playersArray[i]]);
+            matchupArray.push([breakPair[1], bye]);
+        }
+    }
+}
+function createOutput(playersArray, matchupArray) {
+    let output = Math.ceil(playersArray.length / 2) + "\n";
+    colorPreferenceSort(matchupArray);
+    for (let i = 0; i < matchupArray.length; i++) {
+        output += matchupArray[i][0].startingRank + " " + matchupArray[i][1].startingRank + "\n";
+    }
+    syncWriteFile('../output/output.txt', output);
 }
 function colorPreferenceSort(matchupArray) {
     for (let i = 0; i < matchupArray.length; i++) {
